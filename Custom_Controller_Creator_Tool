@@ -1,0 +1,65 @@
+import maya.cmds as cmds
+from PyQt5 import QtWidgets, QtCore
+
+
+class ControllerTool(QtWidgets.QMainWindow):
+    def __init__(self, parent=None):
+        super(ControllerTool, self).__init__(parent)
+        self.setWindowTitle("Maya Controller Tool")
+        self.setFixedSize(250, 200)
+
+        self.create_widgets()
+        self.create_layout()
+
+    def create_widgets(self):
+        self.button_create = QtWidgets.QPushButton("Create Controller", self)
+        self.button_create.clicked.connect(self.create_controller)
+
+        self.checkbox_joint = QtWidgets.QCheckBox("Create Joint", self)
+        self.checkbox_joint.setChecked(True)
+
+        self.label_name = QtWidgets.QLabel("Controller Name:", self)
+        self.lineedit_name = QtWidgets.QLineEdit(self)
+
+    def create_layout(self):
+        central_widget = QtWidgets.QWidget(self)
+        self.setCentralWidget(central_widget)
+
+        layout = QtWidgets.QVBoxLayout(central_widget)
+
+        layout.addWidget(self.button_create)
+        layout.addWidget(self.checkbox_joint)
+        layout.addWidget(self.label_name)
+        layout.addWidget(self.lineedit_name)
+
+    def create_controller(self):
+        name = self.lineedit_name.text()
+        create_joint = self.checkbox_joint.isChecked()
+
+        if not name:
+            cmds.warning("Please enter a valid controller name.")
+            return
+
+        controller = cmds.circle(name=name + "_ctl")[0]
+        cmds.addAttr(controller, longName="controllerType", dataType="string")
+        cmds.setAttr(controller + ".controllerType", "Custom", type="string")
+
+        if create_joint:
+            joint = cmds.joint(name=name + "_jnt")
+            cmds.parent(joint, controller)
+
+        cmds.select(clear=True)
+
+
+def show_controller_tool():
+    try:
+        controller_tool.close()
+        controller_tool.deleteLater()
+    except:
+        pass
+
+    controller_tool = ControllerTool(parent=QtWidgets.QApplication.activeWindow())
+    controller_tool.show()
+
+
+show_controller_tool()
