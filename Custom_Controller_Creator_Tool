@@ -1,25 +1,41 @@
 import maya.cmds as cmds
-from PyQt5 import QtWidgets, QtCore
+from PyQt5 import QtWidgets, QtGui, QtCore
 
 
 class ControllerTool(QtWidgets.QMainWindow):
     def __init__(self, parent=None):
         super(ControllerTool, self).__init__(parent)
-        self.setWindowTitle("Maya Controller Tool")
-        self.setFixedSize(250, 200)
+        self.setWindowTitle("Controller Builder")
+        self.setFixedSize(350, 350)
 
         self.create_widgets()
         self.create_layout()
 
     def create_widgets(self):
+        self.label_color = QtWidgets.QLabel("Controller Color:", self)
+        self.button_red = QtWidgets.QPushButton("", self)
+        self.button_red.setStyleSheet("background-color: red")
+        self.button_blue = QtWidgets.QPushButton("", self)
+        self.button_blue.setStyleSheet("background-color: blue")
+        self.button_green = QtWidgets.QPushButton("", self)
+        self.button_green.setStyleSheet("background-color: green")
+        self.button_yellow = QtWidgets.QPushButton("", self)
+        self.button_yellow.setStyleSheet("background-color: yellow")
+
+        self.label_shape = QtWidgets.QLabel("Shape:", self)
+        self.lineedit_shape = QtWidgets.QLineEdit(self)
+
+        self.label_suffix = QtWidgets.QLabel("Suffix:", self)
+        self.lineedit_suffix = QtWidgets.QLineEdit(self)
+
         self.button_create = QtWidgets.QPushButton("Create Controller", self)
-        self.button_create.clicked.connect(self.create_controller)
+        self.button_create.clicked.connect(lambda: self.create_controller(self.lineedit_shape.text(), self.lineedit_suffix.text()))
 
-        self.checkbox_joint = QtWidgets.QCheckBox("Create Joint", self)
-        self.checkbox_joint.setChecked(True)
+        self.button_bigger = QtWidgets.QPushButton("Bigger", self)
+        self.button_bigger.clicked.connect(lambda: self.resize(QtCore.QSize(300, 400)))
 
-        self.label_name = QtWidgets.QLabel("Controller Name:", self)
-        self.lineedit_name = QtWidgets.QLineEdit(self)
+        self.button_smaller = QtWidgets.QPushButton("Smaller", self)
+        self.button_smaller.clicked.connect(lambda: self.resize(QtCore.QSize(250, 350)))
 
     def create_layout(self):
         central_widget = QtWidgets.QWidget(self)
@@ -27,26 +43,54 @@ class ControllerTool(QtWidgets.QMainWindow):
 
         layout = QtWidgets.QVBoxLayout(central_widget)
 
+        layout.addWidget(self.label_shape)
+        layout.addWidget(self.lineedit_shape)
+        layout.addWidget(self.label_suffix)
+        layout.addWidget(self.lineedit_suffix)
         layout.addWidget(self.button_create)
-        layout.addWidget(self.checkbox_joint)
-        layout.addWidget(self.label_name)
-        layout.addWidget(self.lineedit_name)
+        layout.addWidget(self.label_color)
 
-    def create_controller(self):
-        name = self.lineedit_name.text()
-        create_joint = self.checkbox_joint.isChecked()
+        color_layout = QtWidgets.QHBoxLayout()
+        color_layout.addWidget(self.button_red)
+        color_layout.addWidget(self.button_blue)
+        color_layout.addWidget(self.button_green)
+        color_layout.addWidget(self.button_yellow)
 
-        if not name:
-            cmds.warning("Please enter a valid controller name.")
+        layout.addLayout(color_layout)
+        layout.addWidget(self.button_bigger)
+        layout.addWidget(self.button_smaller)
+
+    def create_controller(self, shape, suffix):
+        controller = None
+        if shape == "circle":
+            controller = cmds.circle(name="ctl_" + suffix)[0]
+        elif shape == "square":
+            controller = cmds.curve(name="ctl_" + suffix, d=1, p=[(-1, 1, 0), (1, 1, 0), (1, -1, 0), (-1, -1, 0), (-1, 1, 0)])
+        elif shape == "diamond":
+            controller = cmds.curve(name="ctl_" + suffix, d=1, p=[(0, 1, 0), (1, 0, 0), (0, -1, 0), (-1, 0, 0), (0, 1, 0)])
+        elif shape == "triangle":
+            controller = cmds.curve(name="ctl_" + suffix, d=1, p=[(0, 1, 0), (1, -1, 0), (-1, -1, 0), (0, 1, 0)])
+        else:
+            cmds.warning("Invalid controller shape.")
             return
 
-        controller = cmds.circle(name=name + "_ctl")[0]
+        color = None
+        if self.sender() == self.button_red:
+            color = (1, 0, 0)
+        elif self.sender() == self.button_blue:
+            color = (0, 0, 1)
+        elif self.sender() == self.button_green:
+            color = (0, 1, 0)
+        elif self.sender() == self.button_yellow:
+            color = (1, 1, 0)
+
+        if color:
+            cmds.setAttr(controller + ".overrideEnabled", 1)
+            cmds.setAttr(controller + ".overrideRGBColors", 1)
+            cmds.setAttr(controller + ".overrideColorRGB", color[0], color[1], color[2])
+
         cmds.addAttr(controller, longName="controllerType", dataType="string")
         cmds.setAttr(controller + ".controllerType", "Custom", type="string")
-
-        if create_joint:
-            joint = cmds.joint(name=name + "_jnt")
-            cmds.parent(joint, controller)
 
         cmds.select(clear=True)
 
